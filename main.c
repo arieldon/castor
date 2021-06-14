@@ -40,7 +40,7 @@ main(int argc, char *argv[])
 	char req[MAX_BUFFER_LEN];
 	char res[MAX_BUFFER_LEN];
 
-	if ((ctx = SSL_CTX_new(TLS_client_method)) == NULL) {
+	if ((ctx = SSL_CTX_new(TLS_client_method())) == NULL) {
 		fprintf(stderr, "SSL_CTX_new() failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -51,16 +51,15 @@ main(int argc, char *argv[])
 	}
 
 	hostname = argv[1];
-	port = "443";
+	port = "1965";
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
 	if ((status = getaddrinfo(hostname, port, &hints, &remote_addr))) {
-		fprintf(stderr, "getaddrinfo() failed.\n",
-			gai_strerror(status));
-		return -1;
+		fprintf(stderr, "getaddrinfo() failed.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	for (p = remote_addr; p != NULL; p = p->ai_next) {
@@ -79,7 +78,7 @@ main(int argc, char *argv[])
 
 	if (p == NULL) {
 		fprintf(stderr, "connect() failed.\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	freeaddrinfo(remote_addr);
@@ -114,8 +113,7 @@ main(int argc, char *argv[])
 	}
 	X509_free(cert);
 
-	sprintf(req, "GET / HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n",
-		hostname);
+	sprintf(req, "gemini://%s\r\n", hostname);
 	SSL_write(ssl, req, strlen(req));
 
 	while ((n_bytes = SSL_read(ssl, res, sizeof(res))) != 0) {
