@@ -13,6 +13,8 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#include "parser.h"
+
 #define MAX_BUFFER_LEN	2048
 
 
@@ -22,6 +24,8 @@ main(int argc, char *argv[])
 	SSL_library_init();
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
+
+	struct gemini_header header;
 
 	int n_bytes;
 	int sockfd;
@@ -116,14 +120,26 @@ main(int argc, char *argv[])
 	sprintf(req, "gemini://%s\r\n", hostname);
 	SSL_write(ssl, req, strlen(req));
 
-	while ((n_bytes = SSL_read(ssl, res, sizeof(res))) != 0) {
-		if (n_bytes == -1) {
-			fprintf(stderr, "SSL_read() failed.\n");
-			exit(EXIT_FAILURE);
-		}
+	SSL_read(ssl, res, sizeof(res));
+	parse_gemini_header(res, &header);
 
-		printf("(%d) %s", n_bytes, res);
-		memset(res, 0, sizeof(res));
+	switch (header.status / 10) {
+	case gemini_input:
+		break;
+	case gemini_success:
+		while ((n_bytes = SSL_read(ssl, res, sizeof(res))) != 0) {
+			if (n_bytes == -1) {
+				fprintf(stderr, "SSL_read() failed.\n");
+				exit(EXIT_FAILURE);
+			}
+			printf("%s", res);
+		}
+		break;
+	case gemini_redirect:
+		break;
+	case gemini_temporary_failure:
+	case gemini_permanent_failure:
+		break;
 	}
 
 	SSL_shutdown(ssl);
