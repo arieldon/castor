@@ -139,6 +139,7 @@ main(int argc, char *argv[])
 		break;
 	case gemini_temporary_failure:
 	case gemini_permanent_failure:
+		fprintf(stderr, "%s", header.meta);
 		break;
 	}
 
