@@ -14,6 +14,7 @@
 #include <openssl/err.h>
 
 #include "parser.h"
+#include "url.h"
 
 #define MAX_BUFFER_LEN	2048
 
@@ -25,6 +26,7 @@ main(int argc, char *argv[])
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
 
+	struct url url;
 	struct gemini_header header;
 
 	int n_bytes;
@@ -39,8 +41,6 @@ main(int argc, char *argv[])
 	SSL *ssl;
 	X509 *cert;
 
-	char *hostname;
-	char *port;
 	char req[MAX_BUFFER_LEN];
 	char res[MAX_BUFFER_LEN];
 
@@ -54,14 +54,13 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	hostname = argv[1];
-	port = "1965";
+	parse_url(argv[1], &url);
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	if ((status = getaddrinfo(hostname, port, &hints, &remote_addr))) {
+	if ((status = getaddrinfo(url.authority, GEMINI_PORT, &hints, &remote_addr))) {
 		fprintf(stderr, "getaddrinfo() failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -92,7 +91,7 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (SSL_set_tlsext_host_name(ssl, hostname) == 0) {
+	if (SSL_set_tlsext_host_name(ssl, url.authority) == 0) {
 		fprintf(stderr, "SSL_set_tlsext_host_name() failed.\n");
 		ERR_print_errors_fp(stderr);
 		exit(EXIT_FAILURE);
@@ -117,7 +116,7 @@ main(int argc, char *argv[])
 	}
 	X509_free(cert);
 
-	sprintf(req, "gemini://%s\r\n", hostname);
+	sprintf(req, "gemini://%s%s\r\n", url.authority, url.path ? url.path : "");
 	SSL_write(ssl, req, strlen(req));
 
 	SSL_read(ssl, res, sizeof(res));
@@ -146,6 +145,8 @@ main(int argc, char *argv[])
 	SSL_shutdown(ssl);
 	SSL_free(ssl);
 	SSL_CTX_free(ctx);
+
+	free_url(&url);
 	close(sockfd);
 
 	exit(EXIT_SUCCESS);

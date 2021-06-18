@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define GEMINI_PORT "1965"
+
 /* <SCHEME>://<AUTHORITY>/<PATH>?<QUERY> */
 struct url {
 	char *scheme;
