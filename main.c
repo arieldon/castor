@@ -31,7 +31,6 @@ main(int argc, char *argv[])
 
 	int n_bytes;
 	int sockfd;
-	int status;
 
 	struct addrinfo hints;
 	struct addrinfo *remote_addr;
@@ -44,13 +43,13 @@ main(int argc, char *argv[])
 	char req[MAX_BUFFER_LEN];
 	char res[MAX_BUFFER_LEN];
 
-	if ((ctx = SSL_CTX_new(TLS_client_method())) == NULL) {
-		fprintf(stderr, "SSL_CTX_new() failed.\n");
+	if (argc < 2) {
+		fprintf(stderr, "usage: %s [hostname]\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
-	if (argc < 2) {
-		fprintf(stderr, "usage: %s [hostname]\n", argv[0]);
+	if ((ctx = SSL_CTX_new(TLS_client_method())) == NULL) {
+		fprintf(stderr, "SSL_CTX_new() failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -60,7 +59,7 @@ main(int argc, char *argv[])
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	if ((status = getaddrinfo(url.authority, GEMINI_PORT, &hints, &remote_addr))) {
+	if (getaddrinfo(url.authority, GEMINI_PORT, &hints, &remote_addr)) {
 		fprintf(stderr, "getaddrinfo() failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -116,16 +115,18 @@ main(int argc, char *argv[])
 	}
 	X509_free(cert);
 
-	sprintf(req, "gemini://%s%s\r\n", url.authority, url.path ? url.path : "");
+	sprintf(req, "gemini://%s%s\r\n",
+		url.authority,
+		url.path ? url.path : "");
 	SSL_write(ssl, req, strlen(req));
 
 	SSL_read(ssl, res, sizeof(res));
 	parse_gemini_header(res, &header);
 
 	switch (header.status / 10) {
-	case gemini_input:
+	case GEMINI_INPUT:
 		break;
-	case gemini_success:
+	case GEMINI_SUCCESS:
 		while ((n_bytes = SSL_read(ssl, res, sizeof(res))) != 0) {
 			if (n_bytes == -1) {
 				fprintf(stderr, "SSL_read() failed.\n");
@@ -134,10 +135,10 @@ main(int argc, char *argv[])
 			printf("%s", res);
 		}
 		break;
-	case gemini_redirect:
+	case GEMINI_REDIRECT:
 		break;
-	case gemini_temporary_failure:
-	case gemini_permanent_failure:
+	case GEMINI_TEMPORARY_FAILURE:
+	case GEMINI_PERMANENT_FAILURE:
 		fprintf(stderr, "%s", header.meta);
 		break;
 	}

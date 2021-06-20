@@ -11,11 +11,11 @@ struct gemini_header {
 };
 
 enum gemini_status {
-	gemini_input = 1,
-	gemini_success = 2,
-	gemini_redirect = 3,
-	gemini_temporary_failure = 4,
-	gemini_permanent_failure = 5,
+	GEMINI_INPUT = 1,
+	GEMINI_SUCCESS = 2,
+	GEMINI_REDIRECT = 3,
+	GEMINI_TEMPORARY_FAILURE = 4,
+	GEMINI_PERMANENT_FAILURE = 5,
 };
 
 void parse_gemini_header(char *response, struct gemini_header *header);
