@@ -18,5 +18,6 @@
 #define GEMINI_PORT "1965"
 
 int connect_to_domain(char *domain);
+void secure_connection(int client, SSL_CTX **ctx, SSL **ssl, char *domain);
 
 #endif

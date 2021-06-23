@@ -38,3 +38,47 @@ connect_to_domain(char *domain)
 	freeaddrinfo(remote_addr);
 	return client;
 }
+
+void
+secure_connection(int client, SSL_CTX **ctx, SSL **ssl, char *domain)
+{
+	X509 *cert;
+
+	*ctx = SSL_CTX_new(TLS_client_method());
+	if (ctx == NULL) {
+		fprintf(stderr, "SSL_CTX_new() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	*ssl = SSL_new(*ctx);
+	if (ssl == NULL) {
+		fprintf(stderr, "SSL_new() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (SSL_set_tlsext_host_name(*ssl, domain) == 0) {
+		fprintf(stderr, "SSL_set_tlsext_host_name() failed.\n");
+		ERR_print_errors_fp(stderr);
+		exit(EXIT_FAILURE);
+	}
+
+	if (SSL_set_fd(*ssl, client) == 0) {
+		fprintf(stderr, "SSL_set_fd() failed.\n");
+		ERR_print_errors_fp(stderr);
+		exit(EXIT_FAILURE);
+	}
+
+	if (SSL_connect(*ssl) == -1) {
+		fprintf(stderr, "SSL_connect() failed.\n");
+		ERR_print_errors_fp(stderr);
+		exit(EXIT_FAILURE);
+	}
+
+	cert = SSL_get_peer_certificate(*ssl);
+	if (cert == NULL) {
+		fprintf(stderr, "SSL_get_peer_certificate() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	X509_free(cert);
+}
