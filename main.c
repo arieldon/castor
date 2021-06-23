@@ -2,10 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <netdb.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
@@ -13,6 +9,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#include "client.h"
 #include "parser.h"
 #include "url.h"
 
@@ -26,19 +23,16 @@ main(int argc, char *argv[])
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
 
-	struct url url;
-	struct gemini_header header;
-
-	int n_bytes;
 	int sockfd;
-
-	struct addrinfo hints;
-	struct addrinfo *remote_addr;
-	struct addrinfo *p;
+	int n_bytes = 0;
+	int n_redirects = 0;
 
 	SSL_CTX *ctx;
 	SSL *ssl;
 	X509 *cert;
+
+	struct url url;
+	struct gemini_header header;
 
 	char req[MAX_BUFFER_LEN];
 	char res[MAX_BUFFER_LEN];
@@ -54,36 +48,6 @@ main(int argc, char *argv[])
 	}
 
 	parse_url(argv[1], &url);
-
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-
-	if (getaddrinfo(url.authority, GEMINI_PORT, &hints, &remote_addr)) {
-		fprintf(stderr, "getaddrinfo() failed.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	for (p = remote_addr; p != NULL; p = p->ai_next) {
-		sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-		if (sockfd == -1) {
-			continue;
-		}
-
-		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(sockfd);
-			continue;
-		}
-
-		break;
-	}
-
-	if (p == NULL) {
-		fprintf(stderr, "connect() failed.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	freeaddrinfo(remote_addr);
 
 	if ((ssl = SSL_new(ctx)) == NULL) {
 		fprintf(stderr, "SSL_new() failed.\n");
@@ -114,6 +78,7 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	X509_free(cert);
+	sockfd = connect_to_domain(url.authority);
 
 	sprintf(req, "gemini://%s%s\r\n",
 		url.authority,
