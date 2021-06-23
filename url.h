@@ -13,6 +13,7 @@ struct url {
 	char *query;
 };
 
+struct url *create_url();
 void parse_url(const char *, struct url *);
 void free_url(struct url *);
 

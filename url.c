@@ -3,6 +3,7 @@
 static void
 _parse_url_scheme(const char *link, char **scheme)
 {
+	size_t schemelen;
 	const char *p;
 
 	p = strstr(link, "://");
@@ -10,16 +11,17 @@ _parse_url_scheme(const char *link, char **scheme)
 		fprintf(stderr, "Invalid URL.\n");
 		exit(EXIT_FAILURE);
 	} else {
-		*scheme = (char *)calloc(sizeof(char), p - link + 1);
+		schemelen = p - link;
+		*scheme = (char *)realloc(*scheme, sizeof(char) * (schemelen + 1));
 		if (*scheme == NULL) {
 			fprintf(stderr, "Unable to allocate scheme for URL.\n");
 			exit(EXIT_FAILURE);
 		}
 
-		memcpy(*scheme, link, p - link);
-		scheme[p - link] = '\0';
+		memcpy(*scheme, link, schemelen);
+		(*scheme)[schemelen] = '\0';
 
-		if (strncmp(*scheme, "gemini", p - link) != 0) {
+		if (strncmp(*scheme, "gemini", schemelen) != 0) {
 			fprintf(stderr, "Invalid URL.\n");
 			exit(EXIT_FAILURE);
 		}
@@ -29,6 +31,7 @@ _parse_url_scheme(const char *link, char **scheme)
 static void
 _parse_url_authority(const char *link, char **authority)
 {
+	size_t authoritylen;
 	const char *p;
 	const char *q;
 
@@ -46,19 +49,21 @@ _parse_url_authority(const char *link, char **authority)
 		q = &link[strlen(link)];
 	}
 
-	*authority = (char *)calloc(sizeof(char), q - p + 1);
+	authoritylen = q - p;
+	*authority = (char *)realloc(*authority, sizeof(char) * (authoritylen + 1));
 	if (*authority == NULL) {
 		fprintf(stderr, "Unable to allocate authority for URL.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	memcpy(*authority, p, q - p);
-	authority[q - p] = '\0';
+	memcpy(*authority, p, authoritylen);
+	(*authority)[authoritylen] = '\0';
 }
 
 static void
 _parse_url_path(const char *link, char **path)
 {
+	size_t pathlen;
 	const char *p;
 	const char *q;
 
@@ -75,19 +80,21 @@ _parse_url_path(const char *link, char **path)
 		q = &link[strlen(link)];
 	}
 
-	*path = (char *)calloc(sizeof(char), q - p + 1);
+	pathlen = q - p;
+	*path = (char *)realloc(*path, sizeof(char) * (pathlen + 1));
 	if (*path == NULL) {
 		fprintf(stderr, "Unable to allocate path for URL.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	memcpy(*path, p, q - p);
-	path[q - p] = '\0';
+	memcpy(*path, p, pathlen);
+	(*path)[pathlen] = '\0';
 }
 
 static void
 _parse_url_query(const char *link, char **query)
 {
+	size_t querylen;
 	const char *p;
 
 	p = strchr(link, '?');
@@ -96,14 +103,32 @@ _parse_url_query(const char *link, char **query)
 		return;
 	}
 
-	*query = (char *)calloc(sizeof(char), (strlen(p) + 1));
+	querylen = strlen(p);
+	*query = (char *)realloc(*query, sizeof(char *) * (querylen + 1));
 	if (*query == NULL) {
 		fprintf(stderr, "Unable to allocate query for URL.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	memcpy(*query, p, strlen(p));
-	query[strlen(p)] = '\0';
+	memcpy(*query, p, querylen);
+	(*query)[querylen] = '\0';
+}
+
+struct url *
+create_url()
+{
+	struct url *url = malloc(sizeof(struct url));
+	if (url == NULL) {
+		fprintf(stderr, "Unable to allocate URL.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	url->scheme = NULL;
+	url->authority = NULL;
+	url->path = NULL;
+	url->query = NULL;
+
+	return url;
 }
 
 void
@@ -116,10 +141,11 @@ parse_url(const char *link, struct url *url)
 }
 
 void
-free_url(struct url *link)
+free_url(struct url *url)
 {
-	free(link->scheme);
-	free(link->authority);
-	free(link->path);
-	free(link->query);
+	free(url->scheme);
+	free(url->authority);
+	free(url->path);
+	free(url->query);
+	free(url);
 }
