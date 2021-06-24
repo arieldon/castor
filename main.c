@@ -70,12 +70,12 @@ request:
 
 		goto request;
 	case GEMINI_SUCCESS:
-		while ((n_bytes = SSL_read(ssl, res, sizeof(res))) != 0) {
-			if (n_bytes == -1) {
-				fprintf(stderr, "SSL_read() failed.\n");
+		while ((n_bytes = SSL_read(ssl, res, MAX_BUFFER_LEN)) != 0) {
+			fwrite(&res, 1, n_bytes, stdout);
+			if (ferror(stdout)) {
+				fprintf(stderr, "fwrite() failed.\n");
 				exit(EXIT_FAILURE);
 			}
-			printf("%s", res);
 		}
 		break;
 	case GEMINI_TEMPORARY_FAILURE:
