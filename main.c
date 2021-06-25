@@ -44,9 +44,8 @@ request:
 	memset(req, '\0', sizeof(req));
 	memset(res, '\0', sizeof(res));
 
-	sprintf(req, "gemini://%s%s\r\n",
-		url->authority,
-		url->path ? url->path : "");
+	sprintf(req, "gemini://%s%s%s\r\n",
+		url->authority, url->path, url->query ? url->query : "");
 	SSL_write(ssl, req, strlen(req));
 
 	SSL_read(ssl, res, sizeof(res));
@@ -54,7 +53,14 @@ request:
 
 	switch (header.status / 10) {
 	case GEMINI_INPUT:
-		break;
+		puts(header.meta);
+
+		char input[MAX_BUFFER_LEN];
+		fgets(input, MAX_BUFFER_LEN, stdin);
+
+		append_query(input, url);
+
+		goto request;
 	case GEMINI_REDIRECT:
 		if (++n_redirects > MAX_REDIRECTS) {
 			fprintf(stderr, "Number of redirects exceeded maximum.\n");

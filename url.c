@@ -70,7 +70,7 @@ _parse_url_path(const char *link, char **path)
 	p = strchr(strstr(link, "://") + 3, '/');
 	if (p == NULL) {
 		/* No path provided after authority. */
-		*path = NULL;
+		*path = strdup("/");
 		return;
 	}
 
@@ -114,6 +114,38 @@ _parse_url_query(const char *link, char **query)
 	(*query)[querylen] = '\0';
 }
 
+static char *
+_percent_encode_string(char *s)
+{
+	char *encoded;
+	size_t encodedlen;
+	size_t n_spaces = 0;
+
+	for (size_t i = 0; i < strlen(s); ++i) {
+		if (s[i] == ' ') {
+			++n_spaces;
+		}
+	}
+	encodedlen = strlen(s) + (n_spaces * 3);
+
+	encoded = (char *)calloc(encodedlen, sizeof(char));
+	if (encoded == NULL) {
+		fprintf(stderr, "Unable to allocate query.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	for (size_t i = 0, j = 0; i < encodedlen; ++i, ++j) {
+		if (s[j] == ' ') {
+			i += 2;
+			strcat(encoded, "%20");
+		} else {
+			encoded[i] = s[j];
+		}
+	}
+
+	return encoded;
+}
+
 struct url *
 create_url()
 {
@@ -148,4 +180,24 @@ free_url(struct url *url)
 	free(url->path);
 	free(url->query);
 	free(url);
+}
+
+void
+append_query(char *s, struct url *url)
+{
+	assert(url->query == NULL);
+
+	char *encoded = _percent_encode_string(s);
+	size_t encodedlen = strlen(encoded);
+
+	url->query = (char *)calloc(encodedlen + 1, sizeof(char));
+	if (url->query == NULL) {
+		fprintf(stderr, "Unable to allocate query.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	url->query[0] = '?';
+	strncat(url->query, encoded, encodedlen - 1);
+
+	free(encoded);
 }
