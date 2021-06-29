@@ -60,6 +60,11 @@ request:
 
 		append_query(input, url);
 
+		SSL_CTX_free(ctx);
+		SSL_shutdown(ssl);
+		SSL_free(ssl);
+		close(sockfd);
+
 		goto request;
 	case GEMINI_REDIRECT:
 		if (++n_redirects > MAX_REDIRECTS) {
@@ -68,11 +73,11 @@ request:
 		}
 
 		parse_url(header.meta, url);
-		memset(&header, 0, sizeof(header));
 
-		close(sockfd);
+		SSL_CTX_free(ctx);
 		SSL_shutdown(ssl);
-		SSL_clear(ssl);
+		SSL_free(ssl);
+		close(sockfd);
 
 		goto request;
 	case GEMINI_SUCCESS:
@@ -90,9 +95,9 @@ request:
 		break;
 	}
 
+	SSL_CTX_free(ctx);
 	SSL_shutdown(ssl);
 	SSL_free(ssl);
-	SSL_CTX_free(ctx);
 
 	free_url(url);
 	close(sockfd);

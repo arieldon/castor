@@ -128,7 +128,7 @@ _percent_encode_string(char *s)
 	}
 	encodedlen = strlen(s) + (n_spaces * 3);
 
-	encoded = (char *)calloc(encodedlen, sizeof(char));
+	encoded = (char *)calloc(encodedlen + 1, sizeof(char));
 	if (encoded == NULL) {
 		fprintf(stderr, "Unable to allocate query.\n");
 		exit(EXIT_FAILURE);
@@ -142,6 +142,7 @@ _percent_encode_string(char *s)
 			encoded[i] = s[j];
 		}
 	}
+	encoded[encodedlen] = '\0';
 
 	return encoded;
 }
